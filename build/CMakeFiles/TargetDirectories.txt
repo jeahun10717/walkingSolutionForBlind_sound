@@ -1,0 +1,3 @@
+/home/jetson4/sound_cpp/build/CMakeFiles/rebuild_cache.dir
+/home/jetson4/sound_cpp/build/CMakeFiles/sound.dir
+/home/jetson4/sound_cpp/build/CMakeFiles/edit_cache.dir
