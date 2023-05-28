@@ -1,5 +1,7 @@
 #include <iostream>
 #include <fstream>
+#include <chrono>
+#include <thread>
 #include <alsa/asoundlib.h>
 
 using namespace std;
@@ -20,15 +22,15 @@ struct WAVHeader {
     unsigned short bitsPerSample;  // 샘플 당 비트 수
 };
 
-int main() {
-    string filePath = "/home/jetson4/sound_cpp/warning_sound.wav";
-    double volumeBalance = 0.5;  // 좌우 소리 균형 값 (0.0은 완전 왼쪽, 1.0은 완전 오른쪽)
-    cout << "start!!!!!!" << '\n';
+// 오디오 데이터 읽기 및 재생 함수
+void playAudio(const string& filePath, double volumeBalance) {
+    cout << "소리 재생 시작!" << '\n';
+
     // WAV 파일 열기
     ifstream file(filePath, ios::binary);
     if (!file) {
         cout << "파일을 열 수 없습니다." << endl;
-        return 1;
+        return;
     }
 
     // WAV 헤더 읽기
@@ -36,18 +38,16 @@ int main() {
     file.read(reinterpret_cast<char*>(&header), sizeof(header));
 
     // 오디오 파라미터 설정
-    unsigned int sampleRate = header.sampleRate;
     unsigned short numChannels = header.numChannels;
-    unsigned short bitsPerSample = header.bitsPerSample;
-    unsigned int byteRate = header.byteRate;
     unsigned short blockAlign = header.blockAlign;
 
     // ALSA 오디오 장치 열기
     snd_pcm_t* handle;
     int err;
-    if ((err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
+    if ((err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0) 
+    {
         cout << "오디오 장치를 열 수 없습니다: " << snd_strerror(err) << endl;
-        return 1;
+        return;
     }
 
     // 오디오 파라미터 설정
@@ -57,7 +57,7 @@ int main() {
     snd_pcm_hw_params_set_access(handle, params, SND_PCM_ACCESS_RW_INTERLEAVED);
     snd_pcm_hw_params_set_format(handle, params, SND_PCM_FORMAT_S16_LE);
     snd_pcm_hw_params_set_channels(handle, params, numChannels);
-    snd_pcm_hw_params_set_rate_near(handle, params, &sampleRate, 0);
+    snd_pcm_hw_params_set_rate_near(handle, params, &header.sampleRate, 0);
     snd_pcm_hw_params(handle, params);
 
     // 버퍼 할당 및 초기화
@@ -71,7 +71,6 @@ int main() {
 
     // 오디오 데이터 읽기 및 재생
     while (file.read(reinterpret_cast<char*>(buffer), sizeof(buffer))) {
-        // test
         for (int i = 0; i < bufferSize; i += numChannels) {
             buffer[i] = static_cast<short>(buffer[i] * leftVolume / 32767);
             if (numChannels == 2) {
@@ -82,11 +81,25 @@ int main() {
             cout << "오디오 재생 중 오류 발생: " << snd_strerror(err) << endl;
             break;
         }
+        memset(buffer, 0, sizeof(buffer));
     }
-
+    
     // 파일 및 장치 닫기
     file.close();
     snd_pcm_close(handle);
 
+    cout << "소리 재생 종료!" << '\n';
+}
+
+int main() {
+    string filePath = "/home/jetson4/sound_cpp/warning_sound.wav";
+    double volumeBalance = 0.5;  // 좌우 소리 균형 값 (0.0은 완전 왼쪽, 1.0은 완전 오른쪽)
+
+    for (int i = 0; i < 10; i++) {
+        std::chrono::seconds duration(1);
+        std::this_thread::sleep_for(duration);
+        playAudio(filePath, volumeBalance);
+    }
     return 0;
 }
+

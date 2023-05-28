@@ -11,6 +11,10 @@ iostream
 -
 fstream
 -
+chrono
+-
+thread
+-
 alsa/asoundlib.h
 -
 
